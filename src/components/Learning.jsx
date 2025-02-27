@@ -10,7 +10,7 @@ import {
   BookOpen, Award, Brain, CheckCircle, XCircle, RefreshCw, 
   PlayCircle, PauseCircle, Volume2, Star, Trophy, Timer,
   Sparkles, ChevronRight, ArrowRight, Headphones,
-  Settings, Book, AlertCircle
+  Settings, Book, AlertCircle, Video
 } from 'lucide-react';
 import '../styles/fonts.css';
 import PracticeExercises from './PracticeExercises';
@@ -264,6 +264,111 @@ const modules = [
         explanation: "It means understanding ideas that aren't directly stated"
       }
     ]
+  },
+  {
+    id: 5,
+    title: "Animal Sound Guessing Game",
+    difficulty: "intermediate",
+    prerequisites: [],
+    estimatedTime: "30 minutes",
+    content: `
+      Enhance your listening skills and vocabulary with our fun animal guessing game!
+      
+      How to play:
+      
+      1. Listen to the animal sound
+      2. Watch the video or look at the image clue
+      3. Choose the correct animal from the options
+      
+      This activity helps you:
+      • Improve audio recognition
+      • Connect sounds with visual cues
+      • Expand your animal vocabulary
+      
+      Ready to test your animal knowledge? Start the quiz when you're ready!
+    `,
+    practice: {
+      type: "animal-sounds",
+      exercises: [
+        {
+          animal: "elephant",
+          sound: "/sound/elephant.mp3",
+          hints: ["This animal is very large", "It has a long trunk"]
+        },
+        {
+          animal: "lion",
+          sound: "/sound/lion.mp3",
+          hints: ["King of the jungle", "Has a large mane"]
+        }
+      ]
+    },
+    quiz: [
+      {
+        question: "Which animal makes this sound?",
+        audio: "/sound/elephant.mp3",
+        video: "/video/elephant.mp4",
+        options: [
+          "Elephant",
+          "Giraffe",
+          "Rhinoceros",
+          "Hippopotamus"
+        ],
+        correct: 0,
+        explanation: "The sound is a trumpet-like call made by an elephant."
+      },
+      {
+        question: "Which animal makes this sound?",
+        audio: "/sound/lion.mp3",
+        video: "/video/lion.mp4",
+        options: [
+          "Tiger",
+          "Lion",
+          "Cheetah",
+          "Leopard"
+        ],
+        correct: 1,
+        explanation: "The sound is a roar made by a lion."
+      },
+      {
+        question: "Which animal makes this sound?",
+        audio: "/sound/wolf.mp3",
+        video: "/video/wolf.mp4",
+        options: [
+          "Dog",
+          "Coyote",
+          "Wolf",
+          "Fox"
+        ],
+        correct: 2,
+        explanation: "The sound is a howl made by a wolf."
+      },
+      {
+        question: "Which animal makes this sound?",
+        audio: "/sound/monkey.mp3",
+        video: "/video/monkey.mp4",
+        options: [
+          "Gorilla",
+          "Chimpanzee",
+          "Baboon",
+          "Monkey"
+        ],
+        correct: 3,
+        explanation: "The sound is a chatter made by a monkey."
+      },
+      {
+        question: "Which animal makes this sound?",
+        audio: "/sound/owl.mp3",
+        video: "/video/owl.mp4",
+        options: [
+          "Eagle",
+          "Hawk",
+          "Owl",
+          "Falcon"
+        ],
+        correct: 2,
+        explanation: "The sound is a hoot made by an owl."
+      }
+    ]
   }
 ];
 
@@ -290,7 +395,10 @@ function Learning() {
   const [isQuizComplete, setIsQuizComplete] = useState(false);
   const [moduleProgress, setModuleProgress] = useState({});
   const [showPractice, setShowPractice] = useState(false);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const videoRef = useRef(null);
   const contentRef = useRef(null);
+  
   useEffect(() => {
     // Load existing progress for the current module
     const loadModuleProgress = async () => {
@@ -324,7 +432,14 @@ function Learning() {
   }, [settings]);
 
 
-  
+  // Reset video player when changing questions
+  useEffect(() => {
+    setIsPlayingVideo(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  }, [currentQuestion]);
 
   // Handle text-to-speech for module content
   const handleReadContent = () => {
@@ -342,6 +457,18 @@ function Learning() {
     const totalQuestions = modules[activeModule].quiz.length;
     const answeredQuestions = Object.keys(userAnswers).length;
     return answeredQuestions === totalQuestions;
+  };
+
+  // Handle video playback
+  const handleVideoPlayback = () => {
+    if (videoRef.current) {
+      if (isPlayingVideo) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setIsPlayingVideo(!isPlayingVideo);
+    }
   };
 
   // Improved score calculation
@@ -396,7 +523,7 @@ function Learning() {
   const handleAnswerSubmit = async (questionIndex, answerIndex) => {
     const currentQuiz = modules[activeModule].quiz[questionIndex];
     const isCorrect = answerIndex === currentQuiz.correct;
-
+  
     // Update answers immediately
     const newAnswers = {
       ...userAnswers,
@@ -406,22 +533,36 @@ function Learning() {
       }
     };
     setUserAnswers(newAnswers);
-
+  
     // Play sound feedback
     if (settings.audioEnabled) {
       playSound(isCorrect ? '/sound/correct.mp3' : '/sound/incorrect.mp3');
     }
-
-    // Get AI feedback
-    const feedback = await generateFeedback(
-      currentQuiz.options[answerIndex],
-      currentQuiz.options[currentQuiz.correct],
-      modules[activeModule].title
-    );
-
-    setFeedback(feedback);
-    setAnnouncement(`${isCorrect ? 'Correct' : 'Incorrect'}. ${feedback}`);
-
+  
+    try {
+      // Get AI feedback
+      const feedbackText = await generateFeedback(
+        currentQuiz.options[answerIndex],
+        currentQuiz.options[currentQuiz.correct],
+        modules[activeModule].title
+      );
+  
+      // Prefix with Correct/Incorrect
+      const prefixedFeedback = `${isCorrect ? 'Correct!' : 'Incorrect.'} ${feedbackText}`;
+      
+      setFeedback(prefixedFeedback);
+      setAnnouncement(prefixedFeedback);
+    } catch (error) {
+      console.error('Error getting AI feedback:', error);
+      // Fallback feedback if AI call fails
+      const fallbackFeedback = isCorrect 
+        ? `Correct! Great job!` 
+        : `Incorrect. The correct answer is: ${currentQuiz.options[currentQuiz.correct]}.`;
+      
+      setFeedback(fallbackFeedback);
+      setAnnouncement(fallbackFeedback);
+    }
+  
     // Check if this is the last question
     const isLastQuestion = questionIndex === modules[activeModule].quiz.length - 1;
     
@@ -452,8 +593,32 @@ function Learning() {
   // Get AI hint
   const getHint = async () => {
     const currentQuiz = modules[activeModule].quiz[currentQuestion];
-    const hint = await generateHint(currentQuiz.question, modules[activeModule].title);
-    setAnnouncement(hint);
+    
+    try {
+      // First check if there are built-in hints in the question
+      if (currentQuiz.hints && currentQuiz.hints.length > 0) {
+        // Use a random hint from the available hints
+        const randomIndex = Math.floor(Math.random() * currentQuiz.hints.length);
+        setAnnouncement(currentQuiz.hints[randomIndex]);
+        setFeedback(currentQuiz.hints[randomIndex]);
+        return;
+      }
+      
+      // If no built-in hints, use AI to generate one
+      const hint = await generateHint(
+        currentQuiz.question, 
+        modules[activeModule].title
+      );
+      
+      setAnnouncement(hint);
+      setFeedback(hint);
+    } catch (error) {
+      console.error('Error getting AI hint:', error);
+      // Fallback hint if AI call fails
+      const fallbackHint = "Think about what we've learned in this module. You can do this!";
+      setAnnouncement(fallbackHint);
+      setFeedback(fallbackHint);
+    }
   };
 
   const handleNextModule = () => {
@@ -475,6 +640,11 @@ function Learning() {
     setIsQuizComplete(false);
     resetTimer();
     setShowQuiz(false);
+    setIsPlayingVideo(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
   };
 
   return (
@@ -641,9 +811,51 @@ function Learning() {
             </div>
 
             <p className="text-xl mb-6">{modules[activeModule].quiz[currentQuestion].question}</p>
-            <button onClick={() => handleModuleAudio(modules[activeModule].quiz[currentQuestion].audio)} className="text-blue-400 hover:text-blue-300 transition-all">
-                Listen to the sound
+            
+            {/* Audio Button - for all module types */}
+            <button onClick={() => handleModuleAudio(modules[activeModule].quiz[currentQuestion].audio)} 
+              className="flex items-center gap-2 px-4 py-2 mb-4 bg-blue-600/70 rounded-lg hover:bg-blue-600 transition-all">
+              <Volume2 className="h-5 w-5" />
+              Listen to the sound
             </button>
+
+            {/* Video Player - only for animal guessing game */}
+            {modules[activeModule].id === 5 && modules[activeModule].quiz[currentQuestion].video && (
+              <div className="mb-6">
+                {modules[activeModule].quiz[currentQuestion].video.endsWith('.mp4') ? (
+                  <div className="relative aspect-video bg-black/30 rounded-lg overflow-hidden mb-4">
+                    <video 
+                      ref={videoRef}
+                      className="w-full h-full object-contain"
+                      src={modules[activeModule].quiz[currentQuestion].video}
+                      poster="/api/placeholder/640/360"
+                      onEnded={() => setIsPlayingVideo(false)}
+                    />
+                    <button 
+                      onClick={handleVideoPlayback}
+                      className="absolute inset-0 flex items-center justify-center group"
+                    >
+                      {!isPlayingVideo && (
+                        <div className="h-16 w-16 bg-blue-600/80 rounded-full flex items-center justify-center group-hover:bg-blue-500 transition-all">
+                          <PlayCircle className="h-10 w-10" />
+                        </div>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="aspect-video bg-black/30 rounded-lg overflow-hidden mb-4 flex items-center justify-center">
+                    <img 
+                      src="/api/placeholder/640/360" 
+                      alt="Animal visual clue" 
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                )}
+                <p className="text-sm text-white/60 mb-6">
+                  Watch the video or image for a visual clue
+                </p>
+              </div>
+            )}
 
             <div className="space-y-4 mb-6">
               {modules[activeModule].quiz[currentQuestion].options.map((option, index) => (
@@ -651,8 +863,10 @@ function Learning() {
                   key={index}
                   onClick={() => handleAnswerSubmit(currentQuestion, index)}
                   className={`w-full p-4 text-left rounded-lg transition-all ${
-                    userAnswers[currentQuestion] === index 
-                      ? 'bg-blue-600' 
+                    userAnswers[currentQuestion]?.selected === index 
+                      ? userAnswers[currentQuestion]?.isCorrect 
+                        ? 'bg-green-600' 
+                        : 'bg-red-600'
                       : 'bg-white/10 hover:bg-white/20'
                   }`}
                 >
@@ -662,22 +876,22 @@ function Learning() {
             </div>
 
             {feedback && (
-              <div className="p-4 bg-white/10 rounded-lg mb-4">
-                {feedback}
-              </div>
-            )}
+  <div className="p-4 bg-white/10 rounded-lg mb-4">
+    {feedback}
+  </div>
+)}
 
-            <button
-              onClick={getHint}
-              className="text-blue-400 hover:text-blue-300 transition-all"
-            >
-              Need a hint?
-            </button>
+<button
+  onClick={getHint}
+  className="text-blue-400 hover:text-blue-300 transition-all"
+>
+  Need a hint?
+</button>
           </div>
         )}
 
-    {/* Quiz Results with detailed feedback */}
-    {isQuizComplete && quizScore !== null && (
+ {/* Quiz Results with detailed feedback */}
+ {isQuizComplete && quizScore !== null && (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl max-w-lg w-full p-6">
           <div className="text-center">
