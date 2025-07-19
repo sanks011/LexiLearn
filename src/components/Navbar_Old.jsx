@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, User, LogOut, GraduationCap, Brain, BookMarked, ScreenShare } from 'lucide-react';
+import { BookOpen, User, LogOut, GraduationCap, Menu, X, Brain, BookMarked, ScreenShare, HeartHandshake } from 'lucide-react';
 
 function Navbar() {
   const { currentUser, logout } = useAuth();
@@ -179,6 +179,35 @@ function NavLink({ to, children, onClick, icon: Icon }) {
       {isActive && (
         <div className="absolute right-2 w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
       )}
+    </Link>
+  );
+}
+
+export default Navbar;
+                onClick={() => setIsOpen(false)}
+              >
+                Login
+              </Link>
+            )}
+          </div>
+        </div>
+      </nav>
+    </>
+  );
+}
+
+function NavLink({ to, children, onClick }) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className="flex items-center px-6 py-3 text-white/90 hover:bg-white/5 hover:text-white transition-all duration-300 hover:translate-x-2 group"
+    >
+      <div className="flex items-center">
+        <span className="transform transition-transform duration-300 group-hover:scale-110">
+          {children}
+        </span>
+      </div>
     </Link>
   );
 }
